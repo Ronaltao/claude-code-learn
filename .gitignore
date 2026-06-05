@@ -1,0 +1,8 @@
+# 计算器运行时生成的历史文件（程序产物，不纳入版本控制）
+exercises/sample-app/calc_history.txt
+# 测试用临时文件
+exercises/sample-app/test_history_tmp.txt
+
+# Python 缓存
+__pycache__/
+*.pyc

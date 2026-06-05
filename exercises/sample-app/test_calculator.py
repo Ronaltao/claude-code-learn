@@ -8,6 +8,7 @@ calculator.py 的单元测试。
     python -m unittest test_calculator.py -v
 """
 
+import os
 import unittest
 
 from calculator import Calculator
@@ -44,6 +45,49 @@ class TestCalculator(unittest.TestCase):
         self.calc.add(1, 2)
         self.calc.subtract(5, 1)
         self.assertEqual(len(self.calc.history), 2)
+
+
+class TestHistoryPersistence(unittest.TestCase):
+    """验证历史记录持久化到文件、并能跨实例读回。"""
+
+    def setUp(self):
+        # 用固定名的临时文件（本环境禁用随机数），每次测试前先清掉残留
+        self.tmp = "test_history_tmp.txt"
+        if os.path.exists(self.tmp):
+            os.remove(self.tmp)
+
+    def tearDown(self):
+        if os.path.exists(self.tmp):
+            os.remove(self.tmp)
+
+    def test_history_persisted_across_instances(self):
+        # 第一个实例做几次运算，历史应自动写入文件
+        calc1 = Calculator(history_file=self.tmp)
+        calc1.add(1, 2)
+        calc1.subtract(9, 4)
+        self.assertTrue(os.path.exists(self.tmp))
+
+        # 新建第二个实例绑定同一文件，应把历史读回来
+        calc2 = Calculator(history_file=self.tmp)
+        self.assertEqual(calc2.history, calc1.history)
+        self.assertEqual(len(calc2.history), 2)
+
+    def test_clear_history_clears_file(self):
+        calc = Calculator(history_file=self.tmp)
+        calc.add(1, 1)
+        calc.clear_history()
+        self.assertEqual(calc.history, [])
+
+        # 重新读取文件，确认文件内容也被清空
+        reloaded = Calculator(history_file=self.tmp)
+        self.assertEqual(reloaded.history, [])
+
+    def test_memory_only_mode_writes_no_file(self):
+        # 不绑定文件时，行为与纯内存版一致，且不应产生文件
+        calc = Calculator()
+        calc.add(2, 3)
+        self.assertEqual(len(calc.history), 1)
+        self.assertFalse(os.path.exists(self.tmp))
 
 
 if __name__ == "__main__":
