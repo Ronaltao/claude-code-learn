@@ -1,10 +1,6 @@
 """
 一个简单的命令行计算器小程序 —— 供 Claude Code 学习练习用。
 
-⚠️ 注意：这个文件里【故意】留了几个 bug，用来给学员练习
-"让 Claude Code 找 bug、修 bug"。请不要直接看下面的提示去手动改，
-先去 exercises/README.md 看练习说明，用 Claude Code 来完成。
-
 运行方式：
     python calculator.py        # 进入交互模式
 """
@@ -43,23 +39,22 @@ class Calculator:
     # 
     def multiply(self, a, b):
         """乘法。"""
-        # BUG #1: 这里写成了加法，不是乘法
-        result = a + b
+        result = a * b
         self._record("multiply", a, b, result)
         return result
 
     def divide(self, a, b):
         """除法。"""
-        # BUG #2: 没有处理除数为 0 的情况，b=0 时会抛出未捕获的 ZeroDivisionError
+        if b == 0:
+            raise ValueError("除数不能为 0")
         result = a / b
         self._record("divide", a, b, result)
         return result
 
     def average(self, numbers):
         """求一组数字的平均值。"""
-        # BUG #3: 用 len(numbers) - 1 作分母是错的，应该是 len(numbers)
         total = sum(numbers)
-        return total / (len(numbers) - 1)
+        return total / len(numbers)
 
     def _record(self, op, a, b, result):
         self.history.append(f"{a} {op} {b} = {result}")
