@@ -54,6 +54,70 @@ MCP 服务器通过配置添加。常见做法是在配置文件里声明一个�
 ```
 Claude Code 会通过 MCP 工具去执行。
 
+## 实战：连接 GitHub MCP 服务器
+
+前面是"示意"，这里给一个**能真正跑通**的例子 —— 让 Claude Code 连上 GitHub，帮你查 / 建 issue 和 PR。
+
+### 第 1 步：写配置文件
+
+在**项目根目录**新建 `.mcp.json`（这种放在项目里的配置叫"项目级配置"，可以随仓库提交给团队共享）：
+
+```json
+{
+  "mcpServers": {
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer ${GITHUB_PAT}"
+      }
+    }
+  }
+}
+```
+
+这里用的是 GitHub 官方托管的**远程 MCP 服务器**（`https://api.githubcopilot.com/mcp/`），不用本地安装。
+
+### 第 2 步：准备一个 GitHub 令牌（PAT）
+
+`${GITHUB_PAT}` 是个**环境变量占位符**，Claude Code 启动时会自动把它替换成你电脑里 `GITHUB_PAT` 这个环境变量的值。这样配置文件里**不出现真实密钥**，即使提交进仓库也安全。
+
+1. 打开 https://github.com/settings/personal-access-tokens/new ，创建一个 fine-grained token。
+2. 选中你要操作的仓库。
+3. 在 **Repository permissions** 里按需给权限：
+   - 只想**查询**：Issues、Pull requests、Contents 给 `Read-only` 即可。
+   - 还想**创建 issue / PR**：把对应项改成 `Read and write`（光有只读会报 403）。
+4. 生成后复制那串 `github_pat_xxx`（只显示一次）。
+5. 把它设成环境变量（Windows PowerShell）：
+   ```bash
+   setx GITHUB_PAT "github_pat_你复制的那串"
+   ```
+
+### 第 3 步：重启后启用
+
+`setx` 设的环境变量**只对之后新启动的进程生效**，所以要**完全退出并重启** Claude Code（在 VS Code 里"重新加载窗口"不够，要整个关掉 VS Code 再开）。重启后输入 `/mcp`，看到 `github` 变成 ✓ connected 就成功了。然后就能自然语言驱动：
+
+```
+帮我查一下当前仓库有哪些未关闭的 issue
+```
+
+## 常见报错排查
+
+第一次配 MCP 很容易卡住，下面是几个高频问题：
+
+| 报错 / 现象 | 原因 | 解决 |
+| --- | --- | --- |
+| `SDK auth failed: Incompatible auth server: does not support dynamic client registration` | Claude Code 在走 OAuth 自动注册，但 GitHub 不支持这种方式 | 改用 PAT（即上面 `headers` 里的 `Bearer ${GITHUB_PAT}` 写法） |
+| 设了环境变量还是读不到 / 连接为空 | `setx` 只对新进程生效，旧的 Claude Code 没继承到 | **完全重启** VS Code / Claude Code，别只"重新加载窗口" |
+| 已经改成 PAT 了，却还在报 OAuth 错误 | 之前失败的 OAuth 状态被缓存了 | 清理 `~/.claude/.credentials.json` 里 `mcpOAuth` 下的相关条目，再重启 |
+| 创建 issue 报 `403 Resource not accessible by personal access token` | token 只有读权限 | 把对应权限（如 Issues）改成 `Read and write` |
+
+> 小技巧：想确认到底是"网络不通""token 无效"还是"Claude Code 端问题"，可以用 `curl` 单独验证：
+> ```bash
+> # 验证 token 是否有效（返回 200 即有效）
+> curl -s -o /dev/null -w "%{http_code}\n" -H "Authorization: Bearer 你的token" https://api.github.com/user
+> ```
+
 ## 安全须知（重要）
 
 MCP 让 Claude Code 能接触外部系统，**权限和信任要格外注意**：
@@ -62,6 +126,7 @@ MCP 让 Claude Code 能接触外部系统，**权限和信任要格外注意**�
 - ⚠️ 连生产数据库要极其谨慎，**优先用只读账号**。
 - ⚠️ 通过 MCP 把数据发给外部服务，等于"对外发布"，注意敏感信息。
 - ✅ 权限系统同样管 MCP 工具调用，危险操作仍会请求批准。
+- 🔑 **密钥别写死在配置里**：用 `${环境变量}` 占位符，不要把真实 token 明文写进 `.mcp.json`（它会被提交进仓库）；万一泄露，及时去 GitHub 吊销重建。
 
 ## 什么时候关注它
 
