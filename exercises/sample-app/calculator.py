@@ -91,7 +91,7 @@ class Calculator:
 def main():
     calc = Calculator(history_file=DEFAULT_HISTORY_FILE)
     print("简单计算器（输入 q 退出）")
-    print("用法示例：add 3 5")
+    print("用法示例：add 3 5    average 2 4 6")
     print(f"历史会自动保存到 {DEFAULT_HISTORY_FILE}；输入 history 查看、clear 清空")
     while True:
         raw = input("> ").strip()
@@ -105,21 +105,37 @@ def main():
             print("（历史已清空）")
             continue
         parts = raw.split()
-        if len(parts) != 3:
-            print("格式错误，请输入：<运算> <数字> <数字>，例如 add 3 5")
+        if len(parts) < 2:
+            print("格式错误，请输入：<运算> <数字...>，例如 add 3 5 或 average 2 4 6")
             continue
-        op, x, y = parts
-        x, y = float(x), float(y)
-        if op == "add":
-            print(calc.add(x, y))
-        elif op == "subtract":
-            print(calc.subtract(x, y))
-        elif op == "multiply":
-            print(calc.multiply(x, y))
-        elif op == "divide":
-            print(calc.divide(x, y))
-        else:
-            print(f"不支持的运算：{op}")
+        op = parts[0]
+        try:
+            nums = [float(p) for p in parts[1:]]
+        except ValueError:
+            print("数字格式错误，请确认运算符后面都是数字")
+            continue
+        try:
+            if op == "average":
+                # 平均值支持任意多个数字
+                print(calc.average(nums))
+            elif op in ("add", "subtract", "multiply", "divide"):
+                if len(nums) != 2:
+                    print(f"{op} 需要正好两个数字，例如 {op} 3 5")
+                    continue
+                x, y = nums
+                if op == "add":
+                    print(calc.add(x, y))
+                elif op == "subtract":
+                    print(calc.subtract(x, y))
+                elif op == "multiply":
+                    print(calc.multiply(x, y))
+                else:
+                    print(calc.divide(x, y))
+            else:
+                print(f"不支持的运算：{op}")
+        except ValueError as e:
+            # 比如 divide 除以 0、average 传入空列表
+            print(f"运算出错：{e}")
 
 
 if __name__ == "__main__":
